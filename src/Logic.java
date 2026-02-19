@@ -95,13 +95,17 @@ class BaseEntity {
 }
     public List<String[]> fetchData() {
     List<String[]> data = new ArrayList<>(); 
-    // file line by line, split by comma, and store as list of string arrays (each array is a row)
     try (BufferedReader br = new BufferedReader(new FileReader(fileName))) {
         String line;
         while ((line = br.readLine()) != null) {
-            data.add(line.split(","));
+            //  icheck if line is not empty aron walay blank lines after new entry
+            if (!line.trim().isEmpty()) { 
+                data.add(line.split(","));
+            }
         }
-    } catch (IOException e) {} 
+    } catch (IOException e) {
+        e.printStackTrace(); 
+    } 
     return data;
 }
 }
