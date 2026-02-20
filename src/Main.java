@@ -173,7 +173,7 @@ private void showForm(BaseEntity logic, String entityName, String[] cols, JTable
     if (entityName.equals("Student") && cols[i].equalsIgnoreCase("Gender")) {
         inputs[i] = new JComboBox<>(new String[]{ "","Male", "Female", "Other"});
     } else {
-        // InputVerifier to validate real-time and show error messages for each field
+                                // InputVerifier to validate real-time and show error messages for each field
         JTextField txt = new JTextField();
         inputs[i] = txt;
         
@@ -206,7 +206,7 @@ private void showForm(BaseEntity logic, String entityName, String[] cols, JTable
             }
             });
         }
-    form.add(inputs[i]);
+    form.add(inputs[i]); 
 }
 
     // Para mu adtog next field
@@ -218,50 +218,72 @@ private void showForm(BaseEntity logic, String entityName, String[] cols, JTable
             });
         }
     }
+    if (isEdit) { 
+        int selectedRow = table.getSelectedRow();
+        if (selectedRow != -1) { // incase sorted, convert to model index para sakto ang data nga makuha
+        int modelRow = table.convertRowIndexToModel(selectedRow);
+        for (int i = 0; i < cols.length; i++) {
+        // Get value from table model para ma pre-fill ang form with existing data
+            Object value = table.getModel().getValueAt(modelRow, i);
+            String valStr = (value != null) ? value.toString() : "";
 
-    int result = JOptionPane.showConfirmDialog(this, form, (isEdit ? "Edit " : "Add ") + entityName, JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
-
-    if (result == JOptionPane.OK_OPTION) {
-    // EXTRACT VALUES GIKAN SA INPUTS 
-    String[] values = new String[cols.length];
-    for (int i = 0; i < inputs.length; i++) {
-        if (inputs[i] instanceof JTextField) { 
-            // Isave na walay comma 
-            values[i] = ((JTextField) inputs[i]).getText().trim().replace(",", ""); 
-        } else if (inputs[i] instanceof JComboBox) {
-            values[i] = ((JComboBox<?>) inputs[i]).getSelectedItem().toString();
+            if (inputs[i] instanceof JTextField) {
+                ((JTextField) inputs[i]).setText(valStr);
+            } else if (inputs[i] instanceof JComboBox) {
+                ((JComboBox<?>) inputs[i]).setSelectedItem(valStr);
+            }
+        }
         }
     }
+    while (true) { 
+    int result = JOptionPane.showConfirmDialog(this, form, (isEdit ? "Edit " : "Add ") + entityName, JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
+    if (result == JOptionPane.OK_OPTION) {
+        // EXTRACT VALUES GIKAN SA INPUTS 
+        String[] values = new String[cols.length];
+        for (int i = 0; i < inputs.length; i++) {
+            if (inputs[i] instanceof JTextField) {  
+                values[i] = ((JTextField) inputs[i]).getText().trim().replace(",", ""); 
+            } else if (inputs[i] instanceof JComboBox) {
+                values[i] = ((JComboBox<?>) inputs[i]).getSelectedItem().toString();
+            } else if (inputs[i] instanceof JLabel) {
+                values[i] = ""; 
+            }
+        }
+        String msg = "";
+        
+        if (isEdit) {    
+        int modelRow = table.convertRowIndexToModel(table.getSelectedRow());
+        String oldID = table.getModel().getValueAt(modelRow, 0).toString();
 
-    String msg = "";
-    
-    if (isEdit) {    
-    int modelRow = table.convertRowIndexToModel(table.getSelectedRow());
-    String oldID = table.getModel().getValueAt(modelRow, 0).toString();
-
-    if (entityName.equals("Student")) {
-        // Correct Order: ID[0], First[1], Last[2], Program[3], Year[5], Gender[6]
-        msg = studentLogic.update(oldID, values[0], values[1], values[2], values[3], values[5], values[6]);
-    } else if (entityName.equals("Program")) {
-        msg = programLogic.update(oldID, values[0], values[1], values[2]);
-    } else if (entityName.equals("College")) {
-        msg = collegeLogic.update(oldID, values[0], values[1]);
+        if (entityName.equals("Student")) {
+            // Correct Order: ID[0], First[1], Last[2], Program[3], Year[5], Gender[6]
+            msg = studentLogic.update(oldID, values[0], values[1], values[2], values[3], values[5], values[6]);
+        } else if (entityName.equals("Program")) {
+            msg = programLogic.update(oldID, values[0], values[1], values[2]);
+        } else if (entityName.equals("College")) {
+            msg = collegeLogic.update(oldID, values[0], values[1]);
+        }
+    }  else { 
+        if (entityName.equals("Student")) {
+            // Skips value[4] (College) para inig isave ang program code ra ang ma-save, then sa display lang nato i-translate to college name
+            msg = studentLogic.add(values[0], values[1], values[2], values[3], values[5], values[6]);
+        } else if (entityName.equals("Program")) {
+            msg = programLogic.add(values[0], values[1], values[2]);
+        } else if (entityName.equals("College")) {
+            msg = collegeLogic.add(values[0], values[1]);
+        }
     }
-}  else { 
-    if (entityName.equals("Student")) {
-        // Skips value[4] (College) para inig isave ang program code ra ang ma-save, then sa display lang nato i-translate to college name
-        msg = studentLogic.add(values[0], values[1], values[2], values[3], values[5], values[6]);
-    } else if (entityName.equals("Program")) {
-        msg = programLogic.add(values[0], values[1], values[2]);
-    } else if (entityName.equals("College")) {
-        msg = collegeLogic.add(values[0], values[1]);
-    }
-}
 
         if (!msg.isEmpty()) { 
-            JOptionPane.showMessageDialog(this, msg);
-            if (msg.contains("successfully") || msg.contains("SUCCESS")) refreshAllTabs();
+        JOptionPane.showMessageDialog(this, msg);
+        
+        if (msg.contains("successfully") || msg.contains("SUCCESS")) { 
+            refreshAllTabs();
+            break; 
+            }  
         }
+    }else {
+        break;}
     }
 }
 
@@ -273,7 +295,7 @@ private void loadTableData(DefaultTableModel model, BaseEntity logic) {
             String pCode = row[3];
             String college = ((Student) logic).getCollegeForProgram(pCode);
             
-            // row[1] is First Name, row[2] is Last Name
+            // row[1] First Name, row[2] Last Name
             model.addRow(new String[]{row[0], row[1], row[2], pCode, college, row[4], row[5]});
         } else {
             model.addRow(row);
