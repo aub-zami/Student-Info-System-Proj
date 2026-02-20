@@ -166,7 +166,7 @@ class Program extends BaseEntity {
     College college = new College();
     if (!college.exists(collegeCode)) return "Error: College " + collegeCode + " does not exist.";
 
-    String newLine = newCode.toUpperCase() + "," + newName + "," + collegeCode.toUpperCase();
+    String newLine = newCode.toUpperCase() + "," + newName.toUpperCase() + "," + collegeCode.toUpperCase();
     String status = modifyFile(this.fileName, 0, oldCode, null, newLine);
 
     if (status.contains("SUCCESS")) {
@@ -185,7 +185,7 @@ class Program extends BaseEntity {
         if (!college.exists(collegeCode)) {
         return "Error: College code " + collegeCode + " does not exist. Please add the college first.";
     }
-        String status = saveToCSV(code.toUpperCase(), name, collegeCode.toUpperCase());
+        String status = saveToCSV(code.toUpperCase(), name.toUpperCase(), collegeCode.toUpperCase());
         return status.contains("SUCCESS") ? "Program " + code + " added successfully." :"Update failed, ensure the file is not open in another program.";
 
     }
@@ -218,7 +218,7 @@ class College extends BaseEntity {
     //  check kung naay programs nga naka-link ani nga college, then cascade the changes to program.csv
     public String update(String oldCode, String newCode, String newName) {
     // Correctly format the line: CODE,NAME
-    String newLine = newCode.toUpperCase() + "," + newName;
+    String newLine = newCode.toUpperCase() + "," + newName.toUpperCase();
     
     // Pass the newLine as the fullLineReplacement (the last argument)
     String status = modifyFile(this.fileName, 0, oldCode, null, newLine);
@@ -235,7 +235,7 @@ class College extends BaseEntity {
         if (this.exists(code)) {
         return "Error: College code " + code + " already exists.";
     }
-        String status = saveToCSV(code.toUpperCase(), name);
+        String status = saveToCSV(code.toUpperCase(), name.toUpperCase());
         return status.contains("SUCCESS") ? "College " + code + " added successfully." :"Update failed, ensure the file is not open in another program.";
 
     }

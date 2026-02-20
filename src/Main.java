@@ -12,24 +12,23 @@ public class Main extends JFrame {
 
     public Main() {
         setTitle("MSU-IIT Student Information System");
-        setSize(800, 600);
+        setSize(1200, 800);
         setDefaultCloseOperation(EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
         UIManager.put("Button.select", new Color(180, 150, 240)); // Light Violet for button click 
-     // ... Constructor code (Title, Size, etc.)
-
+        UIManager.put("TabbedPane.selected", new Color(230, 230, 250)); // Light Lavender for selected tab
         JTabbedPane tabs = new JTabbedPane(JTabbedPane.LEFT); // Moves tabs to the left sidebar
-        tabs.setBackground(new Color(50, 50, 70));//
-        tabs.setForeground(Color.WHITE);
+        tabs.setBackground(Color.WHITE);
+        tabs.setForeground(new Color(111, 66, 193));   // Purple for tab text
+        tabs.setOpaque(true); 
 
         tabs.addTab("Students", createTabPanel(studentLogic, 
-    new String[]{"ID", "First Name", "Last Name", "Program", "College", "Year", "Gender"}, "Student"));
+        new String[]{"ID", "First Name", "Last Name", "Program", "College", "Year", "Gender"}, "Student"));
         tabs.addTab("Programs", createTabPanel(programLogic, new String[]{"Code", "Name", "College"}, "Program"));
         tabs.addTab("Colleges", createTabPanel(collegeLogic, new String[]{"Code", "Name"}, "College"));
 
         add(tabs);
     }
-
    private JPanel createTabPanel(BaseEntity logic, String[] columns, String entityName) {
     JPanel mainPanel = new JPanel(new BorderLayout(0, 20));
     mainPanel.setBackground(new Color(245, 245, 250)); // Light grey background
@@ -50,8 +49,6 @@ public class Main extends JFrame {
     addBtn.setFocusPainted(false);
     addBtn.setBorderPainted(false);
 
-
-    
     header.add(title, BorderLayout.WEST);
     header.add(addBtn, BorderLayout.EAST);
 
@@ -64,6 +61,7 @@ public class Main extends JFrame {
     JTextField searchField = new JTextField();
     searchField.setPreferredSize(new Dimension(0, 40));
     searchField.setBorder(BorderFactory.createTitledBorder("Search by " + columns[0] + " or name..."));
+    searchField.setBackground(new Color(245, 245, 250));
     
     DefaultTableModel model = new DefaultTableModel(columns, 0) {
         @Override public boolean isCellEditable(int r, int c) { return false; }
@@ -74,11 +72,15 @@ public class Main extends JFrame {
     table.getTableHeader().setFont(new Font("SansSerif", Font.BOLD, 12)); 
     table.setShowVerticalLines(false);
     table.setAutoCreateRowSorter(true); //  sorting on all columns
-
+    table.getTableHeader().setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)); 
+    table.getTableHeader().setBackground(new Color(230, 230, 250)); // Light Lavender
+    
     card.add(searchField, BorderLayout.NORTH);
-    card.add(new JScrollPane(table), BorderLayout.CENTER);
+    JScrollPane scroll = new JScrollPane(table);
+    scroll.getViewport().setBackground(Color.WHITE); // Matches your table background
+    scroll.setBorder(BorderFactory.createEmptyBorder());
+    card.add(scroll, BorderLayout.CENTER);
 
-    // --- ACTIONS (Step 1: The Edit Button / Delete) ---
     JPopupMenu rightClickMenu = new JPopupMenu(); 
     JMenuItem editItem = new JMenuItem("Edit " + entityName);
     JMenuItem deleteItem = new JMenuItem("Delete " + entityName);
@@ -207,17 +209,19 @@ private void showForm(BaseEntity logic, String entityName, String[] cols, JTable
             });
         }
     form.add(inputs[i]); 
-}
-
-    // Para mu adtog next field
-    for (int i = 0; i < inputs.length; i++) {
-        final int nextIdx = i + 1;
+}   for (int i = 0; i < inputs.length; i++) { // Para mu adtog next field inig press sa Enter
+    final int currentIdx = i;
         if (inputs[i] instanceof JTextField) {
-            ((JTextField) inputs[i]).addActionListener(e -> {
-                if (nextIdx < inputs.length) inputs[nextIdx].requestFocus();
-            });
-        }
+        ((JTextField) inputs[i]).addActionListener(e -> {
+            for (int j = currentIdx + 1; j < inputs.length; j++) {
+                if (inputs[j] instanceof JTextField || inputs[j] instanceof JComboBox) {
+                inputs[j].requestFocusInWindow();
+                return;
+                }
+            }
+        });
     }
+}
     if (isEdit) { 
         int selectedRow = table.getSelectedRow();
         if (selectedRow != -1) { // incase sorted, convert to model index para sakto ang data nga makuha
