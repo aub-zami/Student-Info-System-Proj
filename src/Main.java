@@ -1,4 +1,4 @@
-import javax.swing.*;
+import javax.swing.*; 
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableRowSorter;
 
@@ -71,7 +71,6 @@ public class Main extends JFrame {
     table.getTableHeader().setPreferredSize(new Dimension(0, 33));
     table.getTableHeader().setFont(new Font("SansSerif", Font.BOLD, 12)); 
     table.setShowVerticalLines(false);
-    table.setAutoCreateRowSorter(true); //  sorting on all columns
     table.getTableHeader().setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)); 
     table.getTableHeader().setBackground(new Color(230, 230, 250)); // Light Lavender
     
@@ -115,32 +114,52 @@ public class Main extends JFrame {
             sorter.setRowFilter(RowFilter.regexFilter("(?i)" + text));
         }
     });
-
     // to Edit Form
     editItem.addActionListener(e -> showForm(logic, entityName, columns, table, true));
     addBtn.addActionListener(e -> showForm(logic, entityName, columns, table, false));
+    
     deleteItem.addActionListener(e -> {
     int row = table.getSelectedRow();
     if (row != -1) {
-        // get key (ID or Code) of the selected row 
         int modelRow = table.convertRowIndexToModel(row);
-        String key = (String) table.getModel().getValueAt(modelRow, 0);
+        String key = (String) table.getModel().getValueAt(modelRow, 0); // e.g., the Code/ID
 
-        int confirm = JOptionPane.showConfirmDialog(
-            this, 
-            "Finalize Changes: Are you sure you want to delete " + entityName + " " + key + "?",
-            "Confirm Deletion",
-            JOptionPane.YES_NO_OPTION,
-            JOptionPane.WARNING_MESSAGE
-        );
+        int count = 0;
+        String warningMsg = "";
+        if (entityName.equals("Program")) {
+            // Check Student CSV (index 3 Program)
+            count = studentLogic.countAffectedEntries(key, 3); 
+            warningMsg = "students";
+        } else if (entityName.equals("College")) {
+            // Check Program CSV (index 2 College)
+            count = programLogic.countAffectedEntries(key, 2); 
+            warningMsg = "programs";
+        }   
 
-        if (confirm == JOptionPane.YES_OPTION) {
-            String msg = logic.delete(key); 
-            JOptionPane.showMessageDialog(this, msg);
-            refreshAllTabs(); 
+        // Show the confirmation with the count and warning message
+        String message = "Are you sure you want to delete " + key + "?";
+        if (count > 0) {
+            message += "\n\nWarning: There are " + count + " " + warningMsg + 
+                       " linked to this. They will be set to NULL.";
         }
-    } else {
-        JOptionPane.showMessageDialog(this, "Please select a row to delete.");
+
+        int confirm = JOptionPane.showConfirmDialog(null, message, "Confirm Delete", 
+                      JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+        
+        if (confirm == JOptionPane.YES_OPTION) {
+        // Set linked records to NULL before deleting the parent
+        if (entityName.equals("Program")) {
+            // If Program, (index 3)
+            studentLogic.nullifyAffectedEntries(key, 3);
+        } else if (entityName.equals("College")) {
+            // IfCollege, (index 2) 
+            programLogic.nullifyAffectedEntries(key, 2);
+        }
+        //  actual deletion of the Program or College
+        String msg = logic.delete(key);
+        JOptionPane.showMessageDialog(null, msg);
+        refreshAllTabs();
+        }
     }
 });
 
@@ -175,10 +194,9 @@ private void showForm(BaseEntity logic, String entityName, String[] cols, JTable
     if (entityName.equals("Student") && cols[i].equalsIgnoreCase("Gender")) {
         inputs[i] = new JComboBox<>(new String[]{ "","Male", "Female", "Other"});
     } else {
-                                // InputVerifier to validate real-time and show error messages for each field
+         // show error messages for each field
         JTextField txt = new JTextField();
         inputs[i] = txt;
-        
         int currentIdx = i;
         txt.setInputVerifier(new InputVerifier() {
             @Override

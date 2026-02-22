@@ -15,6 +15,16 @@ class BaseEntity {
             return "SUCCESS. ";
         } catch (IOException e) { return "ERROR. "; }
     }
+    // para paupdate sa entire file after modifications like pag set Program Code to "NULL" for affected students
+    public void saveAllToCSV(List<String[]> data) {
+        try (PrintWriter writer = new PrintWriter(new FileWriter(fileName))) { 
+            for (String[] row : data) {
+                writer.println(String.join(",", row));
+            }
+        } catch (IOException e) {
+            System.out.println("Error saving data: " + e.getMessage());
+        }
+    }
     // delete for Prog and College 
     public String delete(String key) {
         List<String> lines = new ArrayList<>();
@@ -69,7 +79,6 @@ class BaseEntity {
         return "SUCCESS. ";
     } catch (IOException e) { return "ERROR. "; }
 }
-
     public String formatName(String name) {
         if (name == null || name.isEmpty()) {
         return name;
@@ -78,7 +87,6 @@ class BaseEntity {
         return name.substring(0, 1).toUpperCase() + name.substring(1).toLowerCase();
     
     }
-    
     // para ma-check if a key is being used in a specific column of another file (e.g., Program Code in student.csv)
     public boolean isKeyUsed(String key, int colIdx) {
     try (BufferedReader br = new BufferedReader(new FileReader(fileName))) {
@@ -107,10 +115,33 @@ class BaseEntity {
         e.printStackTrace(); 
     } 
     return data;
-}
-}
+}   //pila ka records ang maapektuhan sa deletion sa Program or College
+    public int countAffectedEntries(String targetKey, int colIndex) {
+    int count = 0;
+    List<String[]> data = fetchData(); // This calls the child's CSV reader
+    for (String[] row : data) {
+        if (row.length > colIndex && row[colIndex].equalsIgnoreCase(targetKey)) {
+            count++;
+        }
+    } return count;
+}   // para ma-nullify ang Program Code or College Code sa affected records after deletion
+    public void nullifyAffectedEntries(String targetKey, int colIndex) {
+    List<String[]> data = fetchData();
+    boolean modified = false;
 
-// THE CHILD CLASSES (Inheritance)
+    for (String[] row : data) {
+        // Check if the specific column matches the deleted ID/Code
+        if (row.length > colIndex && row[colIndex].equalsIgnoreCase(targetKey)) {
+            row[colIndex] = "NULL"; 
+            modified = true;
+        }
+    }
+    if (modified) {
+        saveAllToCSV(data); // Write updated list back to the CSV file using method that accepts List<String[]>
+    }
+}
+}
+// THE CHILD CLASSES 
 class Student extends BaseEntity {
     public Student() { super("student.csv"); }
      
