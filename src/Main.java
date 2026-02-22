@@ -1,6 +1,7 @@
 import javax.swing.*; 
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableRowSorter;
+import javax.swing.table.DefaultTableCellRenderer;
 
 import java.awt.*;
 import java.util.List;
@@ -34,15 +35,42 @@ public class Main extends JFrame {
     mainPanel.setBackground(new Color(245, 245, 250)); // Light grey background
     mainPanel.setBorder(BorderFactory.createEmptyBorder(30, 40, 30, 40));
 
+    DefaultTableModel model = new DefaultTableModel(columns, 0) {
+        @Override public boolean isCellEditable(int r, int c) { return false; }
+    }; 
+
+    JTable table = new JTable(model);
+    TableRowSorter<DefaultTableModel> sorter = new TableRowSorter<>(model);
+    table.setRowSorter(sorter);
+
     // --- HEADER SECTION ---
     JPanel header = new JPanel(new BorderLayout());
     header.setOpaque(false);
-    
-    JLabel title = new JLabel(entityName + "s"); // "Students", "Programs", "Colleges"
-    title.setFont(new Font("SansSerif", Font.BOLD, 28));
+    JPanel bottomPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+    bottomPanel.setOpaque(false);
+    JPanel searchBarPanel = new JPanel(new BorderLayout(10, 0));
+    searchBarPanel.setOpaque(false);
+
+    JLabel sortHint = new JLabel("Tip: Click column headers to sort!");
+    sortHint.setFont(new Font("SansSerif", Font.ITALIC, 11));
+    //sortHint.setForeground(new Color(111, 66, 193));
+    sortHint.setForeground(Color.MAGENTA);
+    sortHint.setVisible(false) ; 
+
+    JButton defaultBtn = new JButton("Sort by Default");
+    defaultBtn.setPreferredSize(new Dimension(150, 30));
+    defaultBtn.setBackground(new Color(245, 245, 250)); // light gray 
+    defaultBtn.setForeground(new Color(111, 66, 193));
+    defaultBtn.setFont(new Font("Tahoma", Font.BOLD, 12));
+    defaultBtn.setFocusPainted(false);
+    defaultBtn.setBorderPainted(false);
+
+    JLabel title = new JLabel(entityName + "s List"); // "Students", "Programs", "Colleges"
+    title.setFont(new Font("Verdana", Font.BOLD, 28));
     title.setForeground(new Color(50, 50, 70));
     
     JButton addBtn = new JButton("+ Add " + entityName);
+    addBtn.setFont(new Font("Verdana", Font.BOLD, 12));
     addBtn.setPreferredSize(new Dimension(150, 40));
     addBtn.setBackground(new Color(111, 66, 193)); // Purple theme
     addBtn.setForeground(Color.WHITE);
@@ -53,20 +81,16 @@ public class Main extends JFrame {
     header.add(addBtn, BorderLayout.EAST);
 
     //table and search container
-    JPanel card = new JPanel(new BorderLayout(0, 15));  
+    JPanel card = new JPanel(new BorderLayout(0, -10));  
     card.setBackground(Color.WHITE);
     card.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
 
-    // Search & Filter (Sort is automatic on headers)
+
     JTextField searchField = new JTextField();
     searchField.setPreferredSize(new Dimension(0, 40));
-    searchField.setBorder(BorderFactory.createTitledBorder("Search by " + columns[0] + " or name..."));
-    searchField.setBackground(new Color(245, 245, 250));
+    searchField.setBorder(BorderFactory.createTitledBorder("Search by " + columns[0] + " or name"));
+    searchField.setBackground(new Color(245, 245, 250)); //
     
-    DefaultTableModel model = new DefaultTableModel(columns, 0) {
-        @Override public boolean isCellEditable(int r, int c) { return false; }
-    }; 
-    JTable table = new JTable(model);
     table.setRowHeight(30);
     table.getTableHeader().setPreferredSize(new Dimension(0, 33));
     table.getTableHeader().setFont(new Font("SansSerif", Font.BOLD, 12)); 
@@ -74,9 +98,33 @@ public class Main extends JFrame {
     table.getTableHeader().setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)); 
     table.getTableHeader().setBackground(new Color(230, 230, 250)); // Light Lavender
     
-    card.add(searchField, BorderLayout.NORTH);
+    JTable rowTable = new JTable(new DefaultTableModel(0, 1) {
+    @Override public boolean isCellEditable(int r, int c) { return false; }
+    });
+
+     table.getModel().addTableModelListener(e -> {
+        DefaultTableModel rowModel = (DefaultTableModel) rowTable.getModel();
+        rowModel.setRowCount(table.getRowCount());
+        for (int i = 0; i < table.getRowCount(); i++) {
+            rowModel.setValueAt(i + 1, i, 0); 
+        }
+    }); 
+    // Style sa number column
+    rowTable.setPreferredScrollableViewportSize(new Dimension(30, 0));
+    rowTable.setBackground(Color.WHITE); 
+    rowTable.setRowHeight(table.getRowHeight());
+    rowTable.setShowGrid(false);
+    rowTable.setFocusable(false);
+    
+    DefaultTableCellRenderer centerRenderer = new DefaultTableCellRenderer();
+    centerRenderer.setHorizontalAlignment(JLabel.CENTER);
+    rowTable.getColumnModel().getColumn(0).setCellRenderer(centerRenderer);
+    
     JScrollPane scroll = new JScrollPane(table);
-    scroll.getViewport().setBackground(Color.WHITE); // Matches your table background
+    scroll.setRowHeaderView(rowTable); 
+    scroll.getViewport().setBackground(Color.WHITE); 
+    scroll.getRowHeader().setBackground(Color.WHITE);
+    scroll.setBackground(Color.WHITE);
     scroll.setBorder(BorderFactory.createEmptyBorder());
     card.add(scroll, BorderLayout.CENTER);
 
@@ -85,88 +133,127 @@ public class Main extends JFrame {
     JMenuItem deleteItem = new JMenuItem("Delete " + entityName);
     rightClickMenu.add(editItem);
     rightClickMenu.add(deleteItem);
+
     table.addMouseListener(new java.awt.event.MouseAdapter() {
     @Override
     public void mousePressed(java.awt.event.MouseEvent e) {
         if (SwingUtilities.isRightMouseButton(e)) {
             int row = table.rowAtPoint(e.getPoint());
-            if (row != -1) {
-                table.setRowSelectionInterval(row, row);
-                rightClickMenu.show(table, e.getX(), e.getY()); // Instant show para dili sha murag mu fail sa first click
+            if (row != -1) { 
+                if (!table.isRowSelected(row)) {
+                    table.setRowSelectionInterval(row, row);
+                }
+                editItem.setEnabled(table.getSelectedRowCount() == 1);
+                rightClickMenu.show(table, e.getX(), e.getY());
             }
         }
     }
 });
 
+    table.getTableHeader().addMouseListener(new java.awt.event.MouseAdapter() {
+    @Override
+    public void mouseEntered(java.awt.event.MouseEvent e) {
+        table.getTableHeader().setBackground(new Color(210, 210, 240)); 
+    }
+    @Override
+    public void mouseExited(java.awt.event.MouseEvent e) {
+        table.getTableHeader().setBackground(new Color(230, 230, 250)); 
+    }
+});
     mainPanel.add(header, BorderLayout.NORTH);
     mainPanel.add(card, BorderLayout.CENTER);
 
-    // Logic for Search
-    searchField.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() { // 
+    searchField.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
         public void insertUpdate(javax.swing.event.DocumentEvent e) { filter(); }
         public void removeUpdate(javax.swing.event.DocumentEvent e) { filter(); }
         public void changedUpdate(javax.swing.event.DocumentEvent e) { filter(); }
 
         private void filter() { 
             String text = searchField.getText();
-            TableRowSorter<DefaultTableModel> sorter = new TableRowSorter<>(model);
-            table.setRowSorter(sorter);
             sorter.setRowFilter(RowFilter.regexFilter("(?i)" + text));
         }
-    });
+    }); 
+    final int[] clickCount = {0}; // to track clicks on "Sort by Default" button
+    defaultBtn.addActionListener(e -> {
+    // Reset sorting and search text
+    sorter.setSortKeys(null);
+    searchField.setText("");
+    
+    clickCount[0]++;
+    if (clickCount[0] >= 2) {
+        sortHint.setVisible(true); // Show tip on multiple clicks
+        mainPanel.revalidate();
+    }
+});
+    searchBarPanel.add(searchField, BorderLayout.CENTER);
+    searchBarPanel.add(defaultBtn, BorderLayout.EAST);
+    JPanel topContainer = new JPanel(new GridLayout(0, 1, 2, 0));
+    topContainer.setOpaque(false);
+    topContainer.add(searchBarPanel);
+    topContainer.add(sortHint);
+
+    card.add(topContainer, BorderLayout.NORTH);
+
     // to Edit Form
     editItem.addActionListener(e -> showForm(logic, entityName, columns, table, true));
     addBtn.addActionListener(e -> showForm(logic, entityName, columns, table, false));
     
     deleteItem.addActionListener(e -> {
-    int row = table.getSelectedRow();
-    if (row != -1) {
+    int[] selectedRows = table.getSelectedRows();
+    if (selectedRows.length == 0) return;
+
+    int totalAffected = 0;
+    String warningMsg = entityName.equals("Program") ? "students" : "programs";
+    
+    // para ma count pila ka entries ang linked
+    for (int row : selectedRows) {
         int modelRow = table.convertRowIndexToModel(row);
-        String key = (String) table.getModel().getValueAt(modelRow, 0); // e.g., the Code/ID
-
-        int count = 0;
-        String warningMsg = "";
-        if (entityName.equals("Program")) {
-            // Check Student CSV (index 3 Program)
-            count = studentLogic.countAffectedEntries(key, 3); 
-            warningMsg = "students";
-        } else if (entityName.equals("College")) {
-            // Check Program CSV (index 2 College)
-            count = programLogic.countAffectedEntries(key, 2); 
-            warningMsg = "programs";
-        }   
-
-        // Show the confirmation with the count and warning message
-        String message = "Are you sure you want to delete " + key + "?";
-        if (count > 0) {
-            message += "\n\nWarning: There are " + count + " " + warningMsg + 
-                       " linked to this. They will be set to NULL.";
-        }
-
-        int confirm = JOptionPane.showConfirmDialog(null, message, "Confirm Delete", 
-                      JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+        String key = (String) table.getModel().getValueAt(modelRow, 0);
         
-        if (confirm == JOptionPane.YES_OPTION) {
-        // Set linked records to NULL before deleting the parent
         if (entityName.equals("Program")) {
-            // If Program, (index 3)
-            studentLogic.nullifyAffectedEntries(key, 3);
+            totalAffected += studentLogic.countAffectedEntries(key, 3);
         } else if (entityName.equals("College")) {
-            // IfCollege, (index 2) 
-            programLogic.nullifyAffectedEntries(key, 2);
-        }
-        //  actual deletion of the Program or College
-        String msg = logic.delete(key);
-        JOptionPane.showMessageDialog(null, msg);
-        refreshAllTabs();
+            totalAffected += programLogic.countAffectedEntries(key, 2);
         }
     }
-});
+    String message = (selectedRows.length == 1) 
+        ? "Are you sure you want to delete this entry?" 
+        : "Are you sure you want to delete these " + selectedRows.length + " entries?";
+        
+    if (totalAffected > 0) {
+        message += "\n\nWarning: This will affect " + totalAffected + " " + warningMsg + 
+                   ". They will be set to NULL.";
+    }
+    int confirm = JOptionPane.showConfirmDialog(null, message, "Confirm Mass Delete", 
+                  JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
 
+    if (confirm == JOptionPane.YES_OPTION) {
+        for (int row : selectedRows) {
+            int modelRow = table.convertRowIndexToModel(row);
+            String key = (String) table.getModel().getValueAt(modelRow, 0);
+
+            if (entityName.equals("Program")) studentLogic.nullifyAffectedEntries(key, 3);
+            else if (entityName.equals("College")) programLogic.nullifyAffectedEntries(key, 2);
+            logic.delete(key);
+        }
+        JOptionPane.showMessageDialog(null, "Successfully deleted. ");
+        refreshAllTabs();
+    }
+});
     loadTableData(model, logic);
+    // para ma set ang width sa ID/Code columns para dili kaayo dako 
+    table.getColumnModel().getColumn(0).setPreferredWidth(80);  // ID / Code
+        if (entityName.equals("Program")) {
+        // Column 1 is the Program Name (e.g., BS in Computer Science)
+        table.getColumnModel().getColumn(1).setPreferredWidth(500); 
+        // Column 2 is the College Code (e.g., CCS)
+        table.getColumnModel().getColumn(2).setPreferredWidth(100); 
+    } else if (entityName.equals("College")) {
+        // Column 1 is the full College Name (e.g., College of Engineering and Technology)
+        table.getColumnModel().getColumn(1).setPreferredWidth(500); 
+    }
     return mainPanel;
 }
-
 private void showForm(BaseEntity logic, String entityName, String[] cols, JTable table, boolean isEdit) {
     JPanel form = new JPanel(new GridLayout(0, 1, 10, 10));
     JComponent[] inputs = new JComponent[cols.length];
@@ -176,7 +263,6 @@ private void showForm(BaseEntity logic, String entityName, String[] cols, JTable
         inputs[i] = new JLabel(" (Auto-generated)");
         continue; 
     }
-
     //container for label and error message like this: "ID [red comment here]" or "First Name [red comment here]"
     JPanel fieldHeader = new JPanel(new BorderLayout());
     fieldHeader.setOpaque(false);
@@ -260,7 +346,30 @@ private void showForm(BaseEntity logic, String entityName, String[] cols, JTable
     while (true) { 
     int result = JOptionPane.showConfirmDialog(this, form, (isEdit ? "Edit " : "Add ") + entityName, JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
     if (result == JOptionPane.OK_OPTION) {
-        // EXTRACT VALUES GIKAN SA INPUTS 
+    //para di ma save kung naay invalid inputs or empty fields
+    boolean hasErrors = false;
+    for (int i = 0; i < inputs.length; i++) {
+        if (inputs[i] instanceof JTextField) {
+            JTextField txt = (JTextField) inputs[i];//if input verifier says it's invalid, or if it's empty, mark as error
+            if (txt.getInputVerifier() != null && !txt.getInputVerifier().verify(txt)) {
+                hasErrors = true; 
+            }
+            if (txt.getText().trim().isEmpty()) { 
+                txt.setBorder(BorderFactory.createLineBorder(Color.RED)); //if empty, turn border red
+                hasErrors = true;
+            }
+        } else if (inputs[i] instanceof JComboBox) {
+            JComboBox<?> combo = (JComboBox<?>) inputs[i];
+            if (combo.getSelectedIndex() <= 0) { // If no selection made sa gender dropdown
+                combo.setBorder(BorderFactory.createLineBorder(Color.RED)); 
+                hasErrors = true;
+            }
+        }
+    }
+    if (hasErrors) {
+        JOptionPane.showMessageDialog(this, "Please fix all red fields before saving.");
+        continue;
+    }
         String[] values = new String[cols.length];
         for (int i = 0; i < inputs.length; i++) {
             if (inputs[i] instanceof JTextField) {  
@@ -308,7 +417,6 @@ private void showForm(BaseEntity logic, String entityName, String[] cols, JTable
         break;}
     }
 }
-
 private void loadTableData(DefaultTableModel model, BaseEntity logic) {
     model.setRowCount(0);
     List<String[]> data = logic.fetchData();
@@ -324,28 +432,31 @@ private void loadTableData(DefaultTableModel model, BaseEntity logic) {
         }
     }
 }
-
     // Call this after any Add/Delete to update the whole UI
     private void refreshAllTabs() {
     JTabbedPane tabs = (JTabbedPane) getContentPane().getComponent(0);
-    int activeTab = tabs.getSelectedIndex(); // Remember where the user is
+    int activeTab = tabs.getSelectedIndex(); 
     
-    // para mu loop sa tanan tabs and refresh data
     for (int i = 0; i < tabs.getTabCount(); i++) {
         JPanel tabPanel = (JPanel) tabs.getComponentAt(i);
-        // 
-        JPanel card = (JPanel) tabPanel.getComponent(1); 
-        JScrollPane scroll = (JScrollPane) card.getComponent(1);
-        JTable table = (JTable) scroll.getViewport().getView();
-        
-        // Reload data based on tab
-        if (i == 0) loadTableData((DefaultTableModel) table.getModel(), studentLogic);
-        else if (i == 1) loadTableData((DefaultTableModel) table.getModel(), programLogic);
-        else if (i == 2) loadTableData((DefaultTableModel) table.getModel(), collegeLogic);
-    }
+        JTable table = null; 
+        for (Component cardComp : ((JPanel)tabPanel.getComponent(1)).getComponents()) {
+            if (cardComp instanceof JScrollPane) {
+                table = (JTable) ((JScrollPane) cardComp).getViewport().getView();
+                break;
+            }
+        } 
+        if (table != null) {
+            DefaultTableModel model = (DefaultTableModel) table.getModel();
+            if (i == 0) loadTableData(model, studentLogic);
+            else if (i == 1) loadTableData(model, programLogic);
+            else if (i == 2) loadTableData(model, collegeLogic);
     
-    tabs.setSelectedIndex(activeTab); // mubalik sa active tab after refresh
-}
+            model.fireTableDataChanged(); 
+        }
+    }
+    tabs.setSelectedIndex(activeTab); 
+    }
 
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> new Main().setVisible(true));
