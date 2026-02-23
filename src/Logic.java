@@ -83,8 +83,16 @@ class BaseEntity {
         if (name == null || name.isEmpty()) {
         return name;
         }
-        // OBRENAH -> Obrenah
-        return name.substring(0, 1).toUpperCase() + name.substring(1).toLowerCase();
+        String[] parts = name.trim().split("\\s+");
+        StringBuilder formatted = new StringBuilder();
+        for (String part : parts) {
+            if (!part.isEmpty()) {
+                formatted.append(Character.toUpperCase(part.charAt(0)))
+                        .append(part.substring(1).toLowerCase())
+                        .append(" ");
+            }
+        }
+        return formatted.toString().trim();
     
     }
     // para ma-check if a key is being used in a specific column of another file (e.g., Program Code in student.csv)
@@ -146,15 +154,15 @@ class Student extends BaseEntity {
     public Student() { super("student.csv"); }
      
     public String add(String id, String first, String last, String pCode, String year, String gender) {
-        // 1. Strict Validation: ID format XXXX-NNNN
+        // ID format XXXX-NNNN
         if (!id.matches("\\d{4}-\\d{4}")) return "Error: ID must follow XXXX-NNNN format.";
         
-        // 2. Strict Validation: Names must only be letters
+        // Names must only be letters
         if (!first.matches("[a-zA-Z ]+") || !last.matches("[a-zA-Z ]+")) 
             return "Error: Names must only contain letters.";
 
-        // 3. Strict Validation: Year must be between 1-6
-        if (!year.matches("[1-6]")) return "Error: Year must be between 1 and 6.";
+        // Year must be in number
+        if (!year.matches("[1-9]")) return "Error: Year must be in number.";
 
         Program program = new Program(); 
         if (!program.exists(pCode)) return "Error: Program " + pCode + " does not exist.";
@@ -167,7 +175,7 @@ class Student extends BaseEntity {
 
     public String update(String oldId, String newId, String first, String last, String pCode, String year, String gender) {
         if (!newId.matches("\\d{4}-\\d{4}")) return "Error: ID must follow XXXX-NNNN format.";
-        if (!year.matches("[1-6]")) return "Error: Year must be between 1 and 6.";
+        if (!year.matches("[1-9]")) return "Error: Year must be in number.";
 
         Program program = new Program();
         if (!program.exists(pCode)) return "Error: Program " + pCode + " does not exist.";

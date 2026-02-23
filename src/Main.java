@@ -46,24 +46,33 @@ public class Main extends JFrame {
     // --- HEADER SECTION ---
     JPanel header = new JPanel(new BorderLayout());
     header.setOpaque(false);
-    JPanel bottomPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-    bottomPanel.setOpaque(false);
     JPanel searchBarPanel = new JPanel(new BorderLayout(10, 0));
     searchBarPanel.setOpaque(false);
+    JPanel buttonGroup = new JPanel(new FlowLayout(FlowLayout.RIGHT, 5, 0));
 
     JLabel sortHint = new JLabel("Tip: Click column headers to sort!");
     sortHint.setFont(new Font("SansSerif", Font.ITALIC, 11));
     //sortHint.setForeground(new Color(111, 66, 193));
     sortHint.setForeground(Color.MAGENTA);
-    sortHint.setVisible(false) ; 
+    sortHint.setVisible(true) ;  
 
     JButton defaultBtn = new JButton("Sort by Default");
-    defaultBtn.setPreferredSize(new Dimension(150, 30));
+    defaultBtn.setPreferredSize(new Dimension(150, 40));
     defaultBtn.setBackground(new Color(245, 245, 250)); // light gray 
     defaultBtn.setForeground(new Color(111, 66, 193));
     defaultBtn.setFont(new Font("Tahoma", Font.BOLD, 12));
     defaultBtn.setFocusPainted(false);
     defaultBtn.setBorderPainted(false);
+
+    JButton actionsBtn = new JButton("Actions");
+    actionsBtn.setPreferredSize(new Dimension(120, 40));
+    actionsBtn.setBackground(new Color(245, 245, 245));
+    actionsBtn.setForeground(new Color(111, 66, 193));
+    actionsBtn.setBorderPainted(false); 
+
+    buttonGroup.setOpaque(false);
+    buttonGroup.add(defaultBtn);
+    buttonGroup.add(actionsBtn);
 
     JLabel title = new JLabel(entityName + "s List"); // "Students", "Programs", "Colleges"
     title.setFont(new Font("Verdana", Font.BOLD, 28));
@@ -128,11 +137,32 @@ public class Main extends JFrame {
     scroll.setBorder(BorderFactory.createEmptyBorder());
     card.add(scroll, BorderLayout.CENTER);
 
-    JPopupMenu rightClickMenu = new JPopupMenu(); 
     JMenuItem editItem = new JMenuItem("Edit " + entityName);
-    JMenuItem deleteItem = new JMenuItem("Delete " + entityName);
+    JMenuItem deleteItem = new JMenuItem("Delete " + entityName);   
+    deleteItem.setPreferredSize(new Dimension(117,23));
+
+    JPopupMenu rightClickMenu = new JPopupMenu(); 
+    rightClickMenu.setBorderPainted(false);
     rightClickMenu.add(editItem);
     rightClickMenu.add(deleteItem);
+    
+    defaultBtn.addActionListener(e -> {
+    table.getRowSorter().setSortKeys(null);
+    // Force the table to model's original order 
+    if (table.getRowSorter() instanceof DefaultRowSorter) {
+        ((DefaultRowSorter<?, ?>) table.getRowSorter()).sort();
+    }
+});
+
+    actionsBtn.addActionListener(e -> {
+    int row = table.getSelectedRow();
+    if (row == -1) {
+        JOptionPane.showMessageDialog(null, "Please select a row from the table first.");
+        return;
+    }
+    
+    rightClickMenu.show(actionsBtn, 0, actionsBtn.getHeight());
+});
 
     table.addMouseListener(new java.awt.event.MouseAdapter() {
     @Override
@@ -173,20 +203,8 @@ public class Main extends JFrame {
             sorter.setRowFilter(RowFilter.regexFilter("(?i)" + text));
         }
     }); 
-    final int[] clickCount = {0}; // to track clicks on "Sort by Default" button
-    defaultBtn.addActionListener(e -> {
-    // Reset sorting and search text
-    sorter.setSortKeys(null);
-    searchField.setText("");
-    
-    clickCount[0]++;
-    if (clickCount[0] >= 2) {
-        sortHint.setVisible(true); // Show tip on multiple clicks
-        mainPanel.revalidate();
-    }
-});
     searchBarPanel.add(searchField, BorderLayout.CENTER);
-    searchBarPanel.add(defaultBtn, BorderLayout.EAST);
+    searchBarPanel.add(buttonGroup, BorderLayout.EAST);
     JPanel topContainer = new JPanel(new GridLayout(0, 1, 2, 0));
     topContainer.setOpaque(false);
     topContainer.add(searchBarPanel);
@@ -199,44 +217,38 @@ public class Main extends JFrame {
     addBtn.addActionListener(e -> showForm(logic, entityName, columns, table, false));
     
     deleteItem.addActionListener(e -> {
-    int[] selectedRows = table.getSelectedRows();
-    if (selectedRows.length == 0) return;
+    int row = table.getSelectedRow();
+    if (row == -1) return;
 
-    int totalAffected = 0;
-    String warningMsg = entityName.equals("Program") ? "students" : "programs";
-    
-    // para ma count pila ka entries ang linked
-    for (int row : selectedRows) {
-        int modelRow = table.convertRowIndexToModel(row);
-        String key = (String) table.getModel().getValueAt(modelRow, 0);
-        
-        if (entityName.equals("Program")) {
-            totalAffected += studentLogic.countAffectedEntries(key, 3);
-        } else if (entityName.equals("College")) {
-            totalAffected += programLogic.countAffectedEntries(key, 2);
-        }
+    int modelRow = table.convertRowIndexToModel(row);
+    String key = (String) table.getModel().getValueAt(modelRow, 0);
+
+    int count = 0;
+    String warningMsg = "";
+    if (entityName.equals("Program")) {
+        count = studentLogic.countAffectedEntries(key, 3);
+        warningMsg = "students";
+    } else if (entityName.equals("College")) {
+        count = programLogic.countAffectedEntries(key, 2);
+        warningMsg = "programs";
     }
-    String message = (selectedRows.length == 1) 
-        ? "Are you sure you want to delete this entry?" 
-        : "Are you sure you want to delete these " + selectedRows.length + " entries?";
-        
-    if (totalAffected > 0) {
-        message += "\n\nWarning: This will affect " + totalAffected + " " + warningMsg + 
-                   ". They will be set to NULL.";
+    String message = "Are you sure you want to delete " + key + "?";
+    if (count > 0) {
+        message += "\n\nWarning: There are " + count + " " + warningMsg + 
+                   " linked to this. They will be set to NULL.";
     }
-    int confirm = JOptionPane.showConfirmDialog(null, message, "Confirm Mass Delete", 
+    int confirm = JOptionPane.showConfirmDialog(null, message, "Confirm Delete", 
                   JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
 
     if (confirm == JOptionPane.YES_OPTION) {
-        for (int row : selectedRows) {
-            int modelRow = table.convertRowIndexToModel(row);
-            String key = (String) table.getModel().getValueAt(modelRow, 0);
-
-            if (entityName.equals("Program")) studentLogic.nullifyAffectedEntries(key, 3);
-            else if (entityName.equals("College")) programLogic.nullifyAffectedEntries(key, 2);
-            logic.delete(key);
+        // Set to NULL all linked entries before deleting
+        if (entityName.equals("Program")) {
+            studentLogic.nullifyAffectedEntries(key, 3);
+        } else if (entityName.equals("College")) {
+            programLogic.nullifyAffectedEntries(key, 2);
         }
-        JOptionPane.showMessageDialog(null, "Successfully deleted. ");
+        String result = logic.delete(key);
+        JOptionPane.showMessageDialog(null, result);
         refreshAllTabs();
     }
 });
@@ -417,7 +429,7 @@ private void showForm(BaseEntity logic, String entityName, String[] cols, JTable
         break;}
     }
 }
-private void loadTableData(DefaultTableModel model, BaseEntity logic) {
+    private void loadTableData(DefaultTableModel model, BaseEntity logic) {
     model.setRowCount(0);
     List<String[]> data = logic.fetchData();
     for (String[] row : data) {
