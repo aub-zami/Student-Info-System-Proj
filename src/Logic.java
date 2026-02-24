@@ -162,7 +162,7 @@ class Student extends BaseEntity {
             return "Error: Names must only contain letters.";
 
         // Year must be in number
-        if (!year.matches("[1-9]")) return "Error: Year must be in number.";
+        if (!year.matches("\\d+")) return "Error: Year must be in number.";
 
         Program program = new Program(); 
         if (!program.exists(pCode)) return "Error: Program " + pCode + " does not exist.";
@@ -175,7 +175,7 @@ class Student extends BaseEntity {
 
     public String update(String oldId, String newId, String first, String last, String pCode, String year, String gender) {
         if (!newId.matches("\\d{4}-\\d{4}")) return "Error: ID must follow XXXX-NNNN format.";
-        if (!year.matches("[1-9]")) return "Error: Year must be in number.";
+        if (!year.matches("\\d+")) return "Error: Year must be in number.";
 
         Program program = new Program();
         if (!program.exists(pCode)) return "Error: Program " + pCode + " does not exist.";
