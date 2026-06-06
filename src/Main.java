@@ -216,7 +216,7 @@ public class Main extends JFrame {
     editItem.addActionListener(e -> showForm(logic, entityName, columns, table, true));
     addBtn.addActionListener(e -> showForm(logic, entityName, columns, table, false));
     
-    deleteItem.addActionListener(e -> {
+    deleteItem.addActionListener(e -> { //ON DELETE CASCADE SET TO NULL, di madelete bisag naay delete function inull sa daan.
     int row = table.getSelectedRow();
     if (row == -1) return;
 
@@ -279,7 +279,16 @@ private void showForm(BaseEntity logic, String entityName, String[] cols, JTable
     JPanel fieldHeader = new JPanel(new BorderLayout());
     fieldHeader.setOpaque(false);
     
-    JLabel label = new JLabel(cols[i]); // "ID", "First Name", etc.
+    //JLabel label = new JLabel(cols[i]); // "ID", "First Name", etc.
+
+    String displayName = cols[i];
+    if (displayName.equalsIgnoreCase("Program")) {
+        displayName = "Program Code";
+    } else if (displayName.equalsIgnoreCase("College")) {
+        displayName = "College Code";
+    }
+    JLabel label = new JLabel(displayName);
+    
     JLabel errorLabel = new JLabel(""); 
     errorLabel.setForeground(Color.RED);
     errorLabel.setFont(new Font("SansSerif", Font.PLAIN, 10));

@@ -25,7 +25,7 @@ class BaseEntity {
             System.out.println("Error saving data: " + e.getMessage());
         }
     }
-    // delete for Prog and College 
+    // delete for Student kay di siya mag-cascade, so diretso delete lang. Ang Program and College kay naay validation sa child records, so di madelete if naa pay naka-link nga records.
     public String delete(String key) {
         List<String> lines = new ArrayList<>();
         try (BufferedReader br = new BufferedReader(new FileReader(fileName))) {
@@ -152,6 +152,8 @@ class BaseEntity {
 // THE CHILD CLASSES 
 class Student extends BaseEntity {
     public Student() { super("student.csv"); }
+
+    //CRUD ADD Student with validations
      
     public String add(String id, String first, String last, String pCode, String year, String gender) {
         // ID format XXXX-NNNN
@@ -172,7 +174,7 @@ class Student extends BaseEntity {
         String status = saveToCSV(id.toUpperCase(), formatName(first), formatName(last), pCode.toUpperCase(), year, formatName(gender));
         return status.contains("SUCCESS") ? "Student " + id + " added successfully." : "Save failed.";
     }
-
+    //CRUD UPDATE Student with validations
     public String update(String oldId, String newId, String first, String last, String pCode, String year, String gender) {
         if (!newId.matches("\\d{4}-\\d{4}")) return "Error: ID must follow XXXX-NNNN format.";
         if (!year.matches("\\d+")) return "Error: Year must be in number.";
@@ -185,7 +187,7 @@ class Student extends BaseEntity {
 
         return modifyFile(this.fileName, 0, oldId, null, newLine);
     }
-    
+
     public String getCollegeForProgram(String pCode) {
         Program programLogic = new Program();
         List<String[]> allPrograms = programLogic.fetchData();
@@ -194,7 +196,7 @@ class Student extends BaseEntity {
                 return p[2]; // Return College Code
             }
         }
-        return "N/A";
+        return "NULL"; 
     }
 }
 
@@ -213,7 +215,7 @@ class Program extends BaseEntity {
         return "Program " + oldCode + " updated successfully.";
     }
     return status;
-}
+}   //CRUD ADD Program with validation for existing College and duplicate Program Code
     public String add(String code, String name, String collegeCode) {
         // Validate that the referenced College exists
         College college = new College();
@@ -228,7 +230,7 @@ class Program extends BaseEntity {
         return status.contains("SUCCESS") ? "Program " + code + " added successfully." :"Update failed, ensure the file is not open in another program.";
 
     }
-
+    //CRUD DELETE PROGRAM with validation 
     public String delete(String code) {
     // Check if naay students nga naka-enroll ani nga program before delete
     Student studentLogic = new Student();
@@ -254,6 +256,7 @@ class Program extends BaseEntity {
 
 class College extends BaseEntity {
     public College() { super("college.csv"); }
+
     //  check kung naay programs nga naka-link ani nga college, then cascade the changes to program.csv
     public String update(String oldCode, String newCode, String newName) {
     // Correctly format the line: CODE,NAME
@@ -269,7 +272,7 @@ class College extends BaseEntity {
     }
     return "Update failed. Ensure the file is not open in another program.";
 }
-
+//CRUD ADD College with validation for duplicate College Code
     public String add(String code, String name) {
         if (this.exists(code)) {
         return "Error: College code " + code + " already exists.";
@@ -278,7 +281,7 @@ class College extends BaseEntity {
         return status.contains("SUCCESS") ? "College " + code + " added successfully." :"Update failed, ensure the file is not open in another program.";
 
     }
-
+//CRUD DELETE College with validation for existing linked Programs
     public String delete(String code) {
     // if naay programs nga naka-link ani nga college
         Program programLogic = new Program();
