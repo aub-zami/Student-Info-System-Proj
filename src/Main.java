@@ -1,9 +1,9 @@
 import javax.swing.*; 
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableRowSorter;
-import javax.swing.table.DefaultTableCellRenderer;
 
 import java.awt.*;
+import java.util.ArrayList;
 import java.util.List;
 
 public class Main extends JFrame {
@@ -12,7 +12,7 @@ public class Main extends JFrame {
     private College collegeLogic = new College();
 
     public Main() {
-        setTitle("MSU-IIT Student Information System");
+        setTitle("Simple Student Information System");
         setSize(1200, 800);
         setDefaultCloseOperation(EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
@@ -77,7 +77,17 @@ public class Main extends JFrame {
     JLabel title = new JLabel(entityName + "s List"); // "Students", "Programs", "Colleges"
     title.setFont(new Font("Verdana", Font.BOLD, 28));
     title.setForeground(new Color(50, 50, 70));
-    
+
+    JLabel countLabel = new JLabel("0 total record(s)");
+    countLabel.setFont(new Font("SansSerif", Font.PLAIN, 13));
+    countLabel.setForeground(new Color(130, 100, 200));
+    countLabel.setBorder(BorderFactory.createEmptyBorder(0, 12, 0, 0));
+
+    JPanel titleGroup = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+    titleGroup.setOpaque(false);
+    titleGroup.add(title);
+    titleGroup.add(countLabel);
+
     JButton addBtn = new JButton("+ Add " + entityName);
     addBtn.setFont(new Font("Verdana", Font.BOLD, 12));
     addBtn.setPreferredSize(new Dimension(150, 40));
@@ -86,7 +96,7 @@ public class Main extends JFrame {
     addBtn.setFocusPainted(false);
     addBtn.setBorderPainted(false);
 
-    header.add(title, BorderLayout.WEST);
+    header.add(titleGroup, BorderLayout.WEST);
     header.add(addBtn, BorderLayout.EAST);
 
     //table and search container
@@ -107,32 +117,8 @@ public class Main extends JFrame {
     table.getTableHeader().setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)); 
     table.getTableHeader().setBackground(new Color(230, 230, 250)); // Light Lavender
     
-    JTable rowTable = new JTable(new DefaultTableModel(0, 1) {
-    @Override public boolean isCellEditable(int r, int c) { return false; }
-    });
-
-     table.getModel().addTableModelListener(e -> {
-        DefaultTableModel rowModel = (DefaultTableModel) rowTable.getModel();
-        rowModel.setRowCount(table.getRowCount());
-        for (int i = 0; i < table.getRowCount(); i++) {
-            rowModel.setValueAt(i + 1, i, 0); 
-        }
-    }); 
-    // Style sa number column
-    rowTable.setPreferredScrollableViewportSize(new Dimension(30, 0));
-    rowTable.setBackground(Color.WHITE); 
-    rowTable.setRowHeight(table.getRowHeight());
-    rowTable.setShowGrid(false);
-    rowTable.setFocusable(false);
-    
-    DefaultTableCellRenderer centerRenderer = new DefaultTableCellRenderer();
-    centerRenderer.setHorizontalAlignment(JLabel.CENTER);
-    rowTable.getColumnModel().getColumn(0).setCellRenderer(centerRenderer);
-    
     JScrollPane scroll = new JScrollPane(table);
-    scroll.setRowHeaderView(rowTable); 
     scroll.getViewport().setBackground(Color.WHITE); 
-    scroll.getRowHeader().setBackground(Color.WHITE);
     scroll.setBackground(Color.WHITE);
     scroll.setBorder(BorderFactory.createEmptyBorder());
     card.add(scroll, BorderLayout.CENTER);
@@ -193,6 +179,10 @@ public class Main extends JFrame {
     mainPanel.add(header, BorderLayout.NORTH);
     mainPanel.add(card, BorderLayout.CENTER);
 
+    JLabel filterLabel = new JLabel(" ");
+    filterLabel.setFont(new Font("SansSerif", Font.ITALIC, 11));
+    filterLabel.setForeground(new Color(111, 66, 193));
+
     searchField.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
         public void insertUpdate(javax.swing.event.DocumentEvent e) { filter(); }
         public void removeUpdate(javax.swing.event.DocumentEvent e) { filter(); }
@@ -200,14 +190,23 @@ public class Main extends JFrame {
 
         private void filter() { 
             String text = searchField.getText();
-            sorter.setRowFilter(RowFilter.regexFilter("(?i)" + text));
+            sorter.setRowFilter(text.isEmpty() ? null : RowFilter.regexFilter("(?i)" + text));
+            int visible = table.getRowCount();
+            int total = model.getRowCount();
+            countLabel.setText("  " + total + " total record(s)");
+            if (!text.isEmpty()) {
+                filterLabel.setText("  Showing " + visible + " result(s) for \"" + text + "\"");
+            } else {
+                filterLabel.setText(" ");
+            }
         }
     }); 
     searchBarPanel.add(searchField, BorderLayout.CENTER);
     searchBarPanel.add(buttonGroup, BorderLayout.EAST);
-    JPanel topContainer = new JPanel(new GridLayout(0, 1, 2, 0));
+    JPanel topContainer = new JPanel(new GridLayout(0, 1, 2, -15));
     topContainer.setOpaque(false);
     topContainer.add(searchBarPanel);
+    topContainer.add(filterLabel);
     topContainer.add(sortHint);
 
     card.add(topContainer, BorderLayout.NORTH);
@@ -252,7 +251,19 @@ public class Main extends JFrame {
         refreshAllTabs();
     }
 });
+    model.addTableModelListener(e -> {
+        String currentSearch = searchField.getText();
+        int total = model.getRowCount();
+        countLabel.setText("  " + total + " total record(s)");
+        if (!currentSearch.isEmpty()) {
+            filterLabel.setText("  Showing " + table.getRowCount() + " result(s) for \"" + currentSearch + "\"");
+        } else {
+            filterLabel.setText(" ");
+        }
+    });
+
     loadTableData(model, logic);
+    countLabel.setText("  " + model.getRowCount() + " total record(s)");
     // para ma set ang width sa ID/Code columns para dili kaayo dako 
     table.getColumnModel().getColumn(0).setPreferredWidth(80);  // ID / Code
         if (entityName.equals("Program")) {
@@ -298,7 +309,27 @@ private void showForm(BaseEntity logic, String entityName, String[] cols, JTable
     form.add(fieldHeader);
 
     // para ni sa dropdown
-    if (entityName.equals("Student") && cols[i].equalsIgnoreCase("Gender")) {
+    if (entityName.equals("Student") && cols[i].equalsIgnoreCase("Program")) {
+        // Program dropdown: populated from program.csv, format "Name - Code", sorted A-Z by name
+        List<String> progList = programLogic.getProgListToChoose();
+        java.util.Collections.sort(progList, String.CASE_INSENSITIVE_ORDER);
+        String[] progOptions = new String[progList.size() + 1];
+        progOptions[0] = ""; // blank placeholder
+        for (int j = 0; j < progList.size(); j++) progOptions[j + 1] = progList.get(j);
+        inputs[i] = new JComboBox<>(progOptions);
+    } else if (entityName.equals("Student") && cols[i].equalsIgnoreCase("Year")) {
+        inputs[i] = new JComboBox<>(new String[]{"", "1", "2", "3", "4", "5", "6"});
+    } else if (entityName.equals("Program") && cols[i].equalsIgnoreCase("College")) {
+        // College dropdown: populated from college.csv, format "Code - Name", sorted A-Z by name
+        List<String[]> collegeData = collegeLogic.fetchData();
+        List<String> collegeList = new ArrayList<>();
+        for (String[] row : collegeData) collegeList.add(row[0] + " - " + row[1]);
+        java.util.Collections.sort(collegeList, String.CASE_INSENSITIVE_ORDER);
+        String[] collegeOptions = new String[collegeList.size() + 1];
+        collegeOptions[0] = "";
+        for (int j = 0; j < collegeList.size(); j++) collegeOptions[j + 1] = collegeList.get(j);
+        inputs[i] = new JComboBox<>(collegeOptions);
+    } else if (entityName.equals("Student") && cols[i].equalsIgnoreCase("Gender")) {
         inputs[i] = new JComboBox<>(new String[]{ "","Male", "Female", "Other"});
     } else {
          // show error messages for each field
@@ -328,7 +359,7 @@ private void showForm(BaseEntity logic, String entityName, String[] cols, JTable
                         errorLabel.setText("");
                         txt.setBorder(UIManager.getLookAndFeelDefaults().getBorder("TextField.border"));
                 }
-                return true; // Return true so they can still move focus, but the red stays
+                return isValid || text.isEmpty(); // Return false when invalid so saving is blocked
                     
             }
             });
@@ -359,7 +390,30 @@ private void showForm(BaseEntity logic, String entityName, String[] cols, JTable
             if (inputs[i] instanceof JTextField) {
                 ((JTextField) inputs[i]).setText(valStr);
             } else if (inputs[i] instanceof JComboBox) {
-                ((JComboBox<?>) inputs[i]).setSelectedItem(valStr);
+                JComboBox<?> combo = (JComboBox<?>) inputs[i];
+                // For Program dropdown (format "Name - Code"), match by code at end
+                if (entityName.equals("Student") && cols[i].equalsIgnoreCase("Program")) {
+                    for (int k = 0; k < combo.getItemCount(); k++) {
+                        String item = combo.getItemAt(k).toString();
+                        int dashIdx = item.lastIndexOf(" - ");
+                        if (dashIdx >= 0 && item.substring(dashIdx + 3).trim().equalsIgnoreCase(valStr)) {
+                            combo.setSelectedIndex(k);
+                            break;
+                        }
+                    }
+                // For College dropdown in Program form (format "Code - Name"), match by code at start
+                } else if (entityName.equals("Program") && cols[i].equalsIgnoreCase("College")) {
+                    for (int k = 0; k < combo.getItemCount(); k++) {
+                        String item = combo.getItemAt(k).toString();
+                        int dashIdx = item.indexOf(" - ");
+                        if (dashIdx >= 0 && item.substring(0, dashIdx).trim().equalsIgnoreCase(valStr)) {
+                            combo.setSelectedIndex(k);
+                            break;
+                        }
+                    }
+                } else {
+                    combo.setSelectedItem(valStr);
+                }
             }
         }
         }
@@ -396,7 +450,18 @@ private void showForm(BaseEntity logic, String entityName, String[] cols, JTable
             if (inputs[i] instanceof JTextField) {  
                 values[i] = ((JTextField) inputs[i]).getText().trim().replace(",", ""); 
             } else if (inputs[i] instanceof JComboBox) {
-                values[i] = ((JComboBox<?>) inputs[i]).getSelectedItem().toString();
+                String selected = ((JComboBox<?>) inputs[i]).getSelectedItem().toString();
+                // Program dropdown format is "Name - Code"; extract the code after last " - "
+                if (entityName.equals("Student") && cols[i].equalsIgnoreCase("Program")) {
+                    int dashIdx = selected.lastIndexOf(" - ");
+                    values[i] = dashIdx >= 0 ? selected.substring(dashIdx + 3).trim() : selected;
+                // College dropdown in Program form is "Code - Name"; extract code before first " - "
+                } else if (entityName.equals("Program") && cols[i].equalsIgnoreCase("College")) {
+                    int dashIdx = selected.indexOf(" - ");
+                    values[i] = dashIdx >= 0 ? selected.substring(0, dashIdx).trim() : selected;
+                } else {
+                    values[i] = selected;
+                }
             } else if (inputs[i] instanceof JLabel) {
                 values[i] = ""; 
             }

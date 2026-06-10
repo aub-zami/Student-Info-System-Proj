@@ -206,6 +206,7 @@ class Program extends BaseEntity {
     public String update(String oldCode, String newCode, String newName, String collegeCode) {
     College college = new College();
     if (!college.exists(collegeCode)) return "Error: College " + collegeCode + " does not exist.";
+    if (!newName.matches("[a-zA-Z ]+")) return "Error: Program name must only contain letters.";
 
     String newLine = newCode.toUpperCase() + "," + newName.toUpperCase() + "," + collegeCode.toUpperCase();
     String status = modifyFile(this.fileName, 0, oldCode, null, newLine);
@@ -220,6 +221,8 @@ class Program extends BaseEntity {
         // Validate that the referenced College exists
         College college = new College();
         
+        if (!code.matches("[a-zA-Z]+")) return "Error: Program code must only contain letters.";
+        if (!name.matches("[a-zA-Z ]+")) return "Error: Program name must only contain letters.";
         if (this.exists(code)) {
         return "Error: Program code " + code + " already exists.";
     }
@@ -260,6 +263,7 @@ class College extends BaseEntity {
     //  check kung naay programs nga naka-link ani nga college, then cascade the changes to program.csv
     public String update(String oldCode, String newCode, String newName) {
     // Correctly format the line: CODE,NAME
+    if (!newName.matches("[a-zA-Z ]+")) return "Error: College name must only contain letters.";
     String newLine = newCode.toUpperCase() + "," + newName.toUpperCase();
     
     // Pass the newLine as the fullLineReplacement (the last argument)
@@ -274,6 +278,8 @@ class College extends BaseEntity {
 }
 //CRUD ADD College with validation for duplicate College Code
     public String add(String code, String name) {
+        if (!code.matches("[a-zA-Z]+")) return "Error: College code must only contain letters.";
+        if (!name.matches("[a-zA-Z ]+")) return "Error: College name must only contain letters.";
         if (this.exists(code)) {
         return "Error: College code " + code + " already exists.";
     }
@@ -291,5 +297,3 @@ class College extends BaseEntity {
     String status = super.delete(code);
         return status.contains("SUCCESS") ? "College " + code + " deleted successfully." :"Update failed, ensure the file is not open in another program.";
 }}
-
-    
